@@ -2,23 +2,15 @@ alias cl="clear"
 alias stash="git stash save"
 alias ag="rg"
 alias vim="nvim"
-alias size="stat -f%z"
-alias fhere="find . -name "
 alias sshJenkins="boxer aws ssh --region us-east-2 i-05525ddd045d90ab2"
 alias vbash="nvim ~/bash"
 alias sbash="source ~/.zshrc"
-alias up="cd .."
 alias gst="git status"
 alias gd="git diff"
-alias s="screen -R"
-alias sls="screen -ls"
-alias ss="screen -S"
-alias reattach="screen -D -r"
 alias patch="npm version patch && git push origin master --follow-tags"
 alias minor="npm version minor && git push origin master --follow-tags"
 alias major="npm version major && git push origin master --follow-tags"
 alias copygit="git remote get-url origin | pbcopy"
-alias npmglobals="npm ls -g --depth 0"
 alias ga="git add"
 alias gcm="git commit -m "
 alias gco="git checkout"
@@ -26,12 +18,30 @@ alias gbr="git branch"
 alias gc="ga . && gcm"
 alias vrc="nvim ~/.config/nvim/init.vim"
 alias tcpu="top -o cpu"
-alias ammend="ga . && git cm --amend --no-edit"
+alias ammend="ga . && git commit --amend --no-edit"
 alias copylast="git log -1 --pretty=%B | pbcopy"
+alias prs="fusion-orchestrate reviews"
+alias mprs="fusion-orchestrate mergeAccepted"
+alias pingroom="osascript ~/dev/bash/applescripts/ping-review-room.applescript"
 # export
 gpr() {
-  local message=`git log -1 --pretty=%B`
-  hub pull-request -m "$message"
+  pushf
+  local commitMessage=`git log -1 --pretty=%B`
+  echo $commitMessage > tmp.txt
+  vim tmp.txt
+  hub issue create -f tmp.txt | xargs node -e 'console.log("Fixes #" + process.argv.find(a => a.includes("github.com")).split("/").pop())' > tmp-issue.txt
+  echo "$commitMessage\n" > tmp.txt
+  cat tmp-issue.txt >> tmp.txt
+  vim tmp.txt
+  hub pull-request -F tmp.txt
+  rm tmp.txt
+  rm tmp-issue.txt
+}
+
+vpr() {
+  pushf
+  local commitMessage=`git log -1 --pretty=%B`
+  hub pull-request -m "$commitMessage"
 }
 
 version() {
@@ -49,11 +59,17 @@ pull() {
 }
 
 pushf() {
-  git push fork $(git rev-parse --abbrev-ref HEAD)
+  git push fork $(git rev-parse --abbrev-ref HEAD) --force
 }
 
 pullf() {
   git pull fork $(git rev-parse --abbrev-ref HEAD)
+}
+
+glanded() {
+  git fetch origin master;
+  git reset --hard origin/master
+  git push fork master --force
 }
 
 cpu() {

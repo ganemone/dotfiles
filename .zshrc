@@ -33,7 +33,6 @@ export PATH=$BREW_PREFIX/sbin:$BREW_PREFIX/bin:$PATH:$HOME/bin
 ## Personal Config
 # -----------------------------------------
 export EDITOR='nvim'
-export NODE_ENV="development"
 export PORT_HTTP=3000
 # -----------------------------------------
 

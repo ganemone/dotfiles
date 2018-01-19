@@ -10,7 +10,7 @@ publish() {
 diffs() {
   echo '{
     "authors":["'$PHID'"],
-    "status":"status-closed",
+    "status":"status-open",
     "limit":200
   }' | arc call-conduit differential.query | jq '.response | map(.uri, .title, .sourcePath)'
 }

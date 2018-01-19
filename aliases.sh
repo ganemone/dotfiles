@@ -12,36 +12,77 @@ alias minor="npm version minor && git push origin master --follow-tags"
 alias major="npm version major && git push origin master --follow-tags"
 alias copygit="git remote get-url origin | pbcopy"
 alias ga="git add"
-alias gcm="git commit -m "
+alias gc="git commit -m "
 alias gco="git checkout"
 alias gbr="git branch"
-alias gc="ga . && gcm"
+alias gac="ga . && gcm"
+alias gs="git stash"
 alias vrc="nvim ~/.config/nvim/init.vim"
 alias tcpu="top -o cpu"
 alias ammend="ga . && git commit --amend --no-edit"
 alias copylast="git log -1 --pretty=%B | pbcopy"
 alias prs="fusion-orchestrate reviews"
-alias mprs="fusion-orchestrate mergeAccepted"
+# alias mprs="fusion-orchestrate mergeAccepted"
 alias pingroom="osascript ~/dev/bash/applescripts/ping-review-room.applescript"
 # export
 gpr() {
   pushf
   local commitMessage=`git log -1 --pretty=%B`
   echo $commitMessage > tmp.txt
-  vim tmp.txt
-  hub issue create -f tmp.txt | xargs node -e 'console.log("Fixes #" + process.argv.find(a => a.includes("github.com")).split("/").pop())' > tmp-issue.txt
-  echo "$commitMessage\n" > tmp.txt
-  cat tmp-issue.txt >> tmp.txt
-  vim tmp.txt
-  hub pull-request -F tmp.txt
+  if [ "$1" == "--reuse" ]; then
+    hub issue >> tmp.txt
+    vim tmp.txt;
+    hub pull-request -F tmp.txt | tail -1 | xargs open
+  else
+    hub issue create -f tmp.txt | xargs node -e 'console.log("Fixes #" + process.argv.find(a => a.includes("github.com")).split("/").pop())' > tmp-issue.txt
+    echo "$commitMessage\n" > tmp.txt
+    cat tmp-issue.txt >> tmp.txt
+    vim tmp.txt
+    hub pull-request -F tmp.txt | tail -1 | xargs open
+    rm tmp-issue.txt
+  fi
   rm tmp.txt
-  rm tmp-issue.txt
+}
+
+waitThenSync() {
+  while ! git status | grep -q '(use "git pull" to merge the remote branch into yours)'
+  do
+    git remote update
+    sleep 1
+  done
+  glanded
+}
+
+mprs() {
+  # folders=`fusion-orchestrate reviews --accepted | grep 'github.com' | xargs node -e '
+  #   process.argv.filter(l => l.includes("github.com")).forEach(link => {
+  #     console.log(link.split("/")[4]);
+  #   })
+  # '`
+  # fusion-orchestrate mergeAccepted
+  # prefix="/Users/giancarloanemone/dev"
+  # while read -r line
+  # do
+  #   folder="$prefix/$line"
+  #   if [ -d $folder ]; then
+  #     echo "Merging $folder";
+  #     cd $folder
+  #     waitThenSync
+  #   else
+  #     echo "Could not find folder: $folder"
+  #   fi
+  # done <<< "$folders"
+}
+
+quickdeploy() {
+  udeploy-client deploy -dt parallel -g origin/master -d production $1
+  udeploy-client interactive $1
 }
 
 vpr() {
   pushf
   local commitMessage=`git log -1 --pretty=%B`
-  hub pull-request -m "$commitMessage"
+  hub pull-request -m "$commitMessage" | tail -1 | xargs open
 }
 
 version() {
@@ -157,4 +198,24 @@ proxy_not_found() {
   else
     echo "Command not found"
   fi
+}
+
+run() {
+  for repo in $HOME/dev/*; do
+  if [ -d $repo ] && [ -d "$repo/.git" ]
+  then
+    cd $repo
+    $@
+    cd ../
+  fi
+  done
+
+  for repo in $HOME/dev/uber/*; do
+  if [ -d $repo ] && [ -d "$repo/.git" ]
+  then
+    cd $repo
+    $@
+    cd ../
+  fi
+  done
 }

@@ -11,7 +11,7 @@ diffs() {
   echo '{
     "authors":["'$PHID'"],
     "status":"status-open",
-    "limit":200
+    "limit":10
   }' | arc call-conduit differential.query | jq '.response | map(.uri, .title, .sourcePath)'
 }
 

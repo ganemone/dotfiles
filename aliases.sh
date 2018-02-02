@@ -15,13 +15,18 @@ alias ga="git add"
 alias gc="git commit -m "
 alias gco="git checkout"
 alias gbr="git branch"
-alias gac="ga . && gcm"
+alias gac="ga . && gc"
 alias gs="git stash"
 alias vrc="nvim ~/.config/nvim/init.vim"
 alias tcpu="top -o cpu"
 alias ammend="ga . && git commit --amend --no-edit"
 alias copylast="git log -1 --pretty=%B | pbcopy"
 alias prs="fusion-orchestrate reviews"
+alias ntest="yarn build-test --skip-coverage && node dist-tests/node.js"
+alias btest="yarn build-test --skip-coverage && unitest --browser=dist-tests/browser.js"
+alias ndebug="yarn build-test && node --inspect-brk dist-tests/node.js"
+alias bdebug="yarn build-test && devtool dist-tests/browser.js" 
+alias chrome="/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome"
 # alias mprs="fusion-orchestrate mergeAccepted"
 alias pingroom="osascript ~/dev/bash/applescripts/ping-review-room.applescript"
 # export
@@ -30,10 +35,11 @@ gpr() {
   local commitMessage=`git log -1 --pretty=%B`
   echo $commitMessage > tmp.txt
   if [ "$1" == "--reuse" ]; then
-    hub issue >> tmp.txt
+    gh is >> tmp.txt
     vim tmp.txt;
     hub pull-request -F tmp.txt | tail -1 | xargs open
   else
+    vim tmp.txt;
     hub issue create -f tmp.txt | xargs node -e 'console.log("Fixes #" + process.argv.find(a => a.includes("github.com")).split("/").pop())' > tmp-issue.txt
     echo "$commitMessage\n" > tmp.txt
     cat tmp-issue.txt >> tmp.txt
@@ -41,6 +47,18 @@ gpr() {
     hub pull-request -F tmp.txt | tail -1 | xargs open
     rm tmp-issue.txt
   fi
+  rm tmp.txt
+}
+
+scriptGpr() {
+  pushf
+  local commitMessage=`git log -1 --pretty=%B`
+  echo $commitMessage > tmp.txt
+  hub issue create -f tmp.txt | xargs node -e 'console.log("Fixes #" + process.argv.find(a => a.includes("github.com")).split("/").pop())' > tmp-issue.txt
+  echo "$commitMessage\n" > tmp.txt
+  cat tmp-issue.txt >> tmp.txt
+  hub pull-request -F tmp.txt | tail -1 | xargs open
+  rm tmp-issue.txt
   rm tmp.txt
 }
 
@@ -88,7 +106,7 @@ vpr() {
 version() {
   npm version $1 --no-git
   local v=`jq -r .version package.json`
-  gc "Release v$v"
+  gac "Release v$v"
 }
 
 push() {
@@ -201,16 +219,24 @@ proxy_not_found() {
 }
 
 run() {
-  for repo in $HOME/dev/*; do
-  if [ -d $repo ] && [ -d "$repo/.git" ]
-  then
-    cd $repo
-    $@
-    cd ../
-  fi
-  done
+  $HOME/dev/run.sh
+}
 
-  for repo in $HOME/dev/uber/*; do
+eachPar() {
+  parallel "cd {} && $@" ::: $HOME/dev/fusion-plugin-*
+  parallel "cd {} && $@" ::: $HOME/dev/uber/fusion-plugin-*
+}
+
+eachGithubPar() {
+  parallel "cd {} && $@" ::: $HOME/dev/fusion-plugin-*
+}
+
+eachUberPar() {
+  parallel "cd {} && $@" ::: $HOME/dev/uber/fusion-plugin-*
+}
+
+eachG() {
+  for repo in $HOME/dev/fusion-plugin-*; do
   if [ -d $repo ] && [ -d "$repo/.git" ]
   then
     cd $repo
@@ -219,3 +245,77 @@ run() {
   fi
   done
 }
+
+eachU() {
+  for repo in $HOME/dev/uber/fusion-plugin-*; do
+  if [ -d $repo ] && [ -d "$repo/.git" ]
+  then
+    cd $repo
+    $@
+    cd ../
+  fi
+  done
+}
+
+each() {
+  eachG $@
+  eachU $@
+}
+
+alias releaseG="eachG doGithubReleases"
+doGithubReleases() {
+    local commitMessage=`git log -1 --pretty=%B`
+    if [[ $commitMessage =~ ^Release\.v[0-9]\.*$ ]]
+    then
+      # echo "IS RELEASE $commitMessage - ignoring"
+    else 
+      jq .name package.json
+      tmp=""
+      vared -p 'Publish a version? (patch | minor | major | skip): ' -c tmp
+      if [[ "$tmp" == "patch" || "$tmp" == "minor" || "$tmp" == "major" ]]
+      then
+        echo "Publishing $tmp"
+        version $tmp
+        vpr
+      else 
+        echo "Skipping..."
+      fi
+    fi
+}
+
+
+# check for git changes
+# if [[ `git status --porcelain` ]]; then
+#   # Changes
+# else
+#   # No changes
+# fi
+
+# Landing arc prs
+alias releaseU="eachU doPhabReleases"
+doPhabReleases() {
+  jq .name package.json
+  if arc which | grep -q 'No revisions match.'
+  then
+    echo "No revisions"
+  else
+    if arc land; then
+      git pull origin master;
+      npm version patch;
+      git push origin master --follow-tags;
+    else
+      echo "Land failed"
+    fi
+  fi
+}
+
+# Searching in if statement
+# if grep -q @uber package.json; then
+#   echo $repo
+#   mv $repo ../uber/
+# fi
+
+# creating an issue
+# folder=`basename $repo`
+# echo $folder
+# hub issue create -m "Migrate $folder to DI"

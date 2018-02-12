@@ -2,7 +2,7 @@
 # -----------------------------------------
 export ZSH=/Users/giancarloanemone/.oh-my-zsh
 export UPDATE_ZSH_DAYS=13
-ZSH_THEME=""
+ZSH_THEME="amuse"
 ENABLE_CORRECTION="false"
 COMPLETION_WAITING_DOTS="true"
 DISABLE_UNTRACKED_FILES_DIRTY="true"
@@ -46,6 +46,3 @@ source $BASH_PATH/nvm.sh
 source $BASH_PATH/aliases.sh
 source $BASH_PATH/phab.sh
 source $BASH_PATH/internal.sh
-
-autoload -U promptinit; promptinit
-prompt pure
